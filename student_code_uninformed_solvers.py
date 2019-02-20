@@ -1,4 +1,3 @@
-
 from solver import *
 
 class SolverDFS(UninformedSolver):

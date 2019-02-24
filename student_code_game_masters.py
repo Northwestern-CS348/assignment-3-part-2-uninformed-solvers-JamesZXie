@@ -358,7 +358,6 @@ class Puzzle8Game(GameMaster):
             counter += 1
 
         gamestate = (tuple(row1_list), tuple(row2_list), tuple(row3_list))
-        print("current gamestate:", gamestate)
         return gamestate
 
     def makeMove(self, movable_statement):
@@ -397,15 +396,10 @@ class Puzzle8Game(GameMaster):
         new_fact1 = Fact(Statement(statement2_list), [])
 
         curr_empty = parse_input("fact: (located empty " + statement2_list[2].term.element + " " + statement2_list[3].term.element + ")")
-        print("empty ask:", curr_empty)
         statement3_list = statement1_list
         statement3_list[1] = "empty"
         new_empty = Fact(Statement(statement3_list), [])
 
-        print("curr fact:", curr_fact1)
-        print("new fact:", new_fact1)
-        print("curr empty:", curr_empty)
-        print("new empty:", new_empty)
         self.kb.kb_retract(curr_fact1)
         self.kb.kb_assert(new_fact1)
         self.kb.kb_retract(curr_empty)

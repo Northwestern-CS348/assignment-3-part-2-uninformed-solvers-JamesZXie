@@ -225,18 +225,37 @@ class SolverBFS(UninformedSolver):
                 # print("checking... ", self.currentState.state)
                 # print("with... ", self.gm.getGameState())
 
-
         # Start BFS + gm.makeMovin' until we reach the next unvisited state.
         queue = [self.currentState]
 
 
 
+        # H O L Y SHIT...
         while self.currentState in self.visited:
             self.currentState = queue.pop(0)
-            if self.currentState.requiredMovable:
-                self.gm.makeMove(self.currentState.requiredMovable)
             for child in self.currentState.children:
                 queue.append(child)
+
+        #store it.
+        new_state = self.currentState
+
+        # ok so our state is in the right place, but we don't have the required movables necessary to get to
+        # that state. let's stack them up in an array first, appending to the beginning of the array each time.
+        moves = []
+        if self.currentState.parent:
+            while self.currentState.parent:
+                moves.insert(0, self.currentState.requiredMovable)
+                self.gm.reverseMove(self.currentState.requiredMovable)
+                self.currentState = self.currentState.parent
+
+        for move in moves:
+            self.gm.makeMove(move)
+
+        self.currentState = new_state
+
+        print("DID THIS FUCKING WORK? OMO: ")
+        print(self.currentState.state)
+        print(self.gm.getGameState())
 
         # Check to see if this state is our victory condition
 

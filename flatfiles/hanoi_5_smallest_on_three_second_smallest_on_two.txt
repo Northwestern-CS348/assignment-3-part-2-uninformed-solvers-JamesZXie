@@ -20,7 +20,6 @@ fact: (pred obj1 obj2)
 rule: ((pred obj1 obj2) (pred obj2 obj3)) -> (pred obj1 obj3)
 
 """
-fact: (larger none disk5)
 fact: (larger disk5 disk4)
 fact: (larger disk4 disk3)
 fact: (larger disk3 disk2)
@@ -35,6 +34,5 @@ fact: (top disk2 peg2)
 fact: (top disk3 peg1)
 
 rule: ((larger ?x ?y) (larger ?y ?z)) -> (larger ?x ?z)
-rule: ((larger ?x ?y) (on ?x ?a) (on ?y ?a)) -> (above ?y ?x)
 rule: ((top ?x ?a) (top ?y ?b) (larger ?y ?x)) -> (movable ?x ?a ?b)
-rule: ((top ?x ?a) (above ?y ?x)) -> (top ?y ?a)
+rule: ((top ?x ?a) (empty ?b)) -> (movable ?x ?a ?b)

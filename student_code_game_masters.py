@@ -78,8 +78,20 @@ class TowerOfHanoiGame(GameMaster):
 
 
         game_state = (peg1_tuple, peg2_tuple, peg3_tuple)
-        print("current gamestate: ", game_state)
         return game_state
+
+    def getFact(self, fact):
+        """INTERNAL USE ONLY
+        Get the fact in the KB that is the same as the fact argument
+        Args:
+            fact (Fact): Fact we're searching for
+        Returns:
+            Fact: matching fact
+        """
+        for kbfact in self.kb.facts:
+            if fact == kbfact:
+                return True
+        return False
 
 
     def makeMove(self, movable_statement):
@@ -105,6 +117,26 @@ class TowerOfHanoiGame(GameMaster):
         # add (on disk secondpeg)
         # that should be it...
 
+        if type(movable_statement) != Statement or not self.kb.kb_ask(Fact(movable_statement, [])):
+            # print("current gamestate: ", self.getGameState())
+            # print("~~~~~~~Error: ", movable_statement, "is not a valid movable statement~~~~~~~")
+            return None
+
+        # print("current gamestate: ", self.getGameState())
+        # if self.kb.kb_ask(parse_input("fact: (movable ?X ?A ?B)")):
+        #     for binding in self.kb.kb_ask(parse_input("fact: (movable ?X ?A ?B)")):
+        #         print("movable: ", binding.bindings[0].constant.element)
+        # if self.kb.kb_ask(parse_input("fact: (empty ?X)")):
+        #     for binding in self.kb.kb_ask(parse_input("fact: (empty ?X)")):
+        #         print("empty: ", binding.bindings[0].constant.element)
+        # if self.kb.kb_ask(parse_input("fact: (top ?X ?A)")):
+        #     for binding in self.kb.kb_ask(parse_input("fact: (top ?X ?A)")):
+        #         print("top fact: ", binding.bindings[0].constant.element)
+        # print("moving: ", movable_statement)
+
+
+
+        # remove old "on", add new "on"
         statement1_list = ["on"]
         statement2_list = ["on"]
 
@@ -117,8 +149,107 @@ class TowerOfHanoiGame(GameMaster):
         curr_fact = Fact(Statement(statement1_list), [])
         new_fact = Fact(Statement(statement2_list), [])
 
+
+        # print("retracted: fact: (top " + movable_statement.terms[0].term.element + " " + movable_statement.terms[1].term.element + ")")
+
+
+        # (movable disk1 peg1 peg2)
+        # retract (fact: on disk1 peg1)
+
+        # DISK We're moving from:
+        # Retract previous on statement
+        # Retract previous top statement
+        # If empty, say empty.
+        # If not empty, make the new top statement using ontopof
+
+        # STEP 1
         self.kb.kb_retract(curr_fact)
+        moved_disk= movable_statement.terms[0].term.element
+        prev_peg= movable_statement.terms[1].term.element
+        new_peg=movable_statement.terms[2].term.element
+
+        # STEP 2
+        top_ask = parse_input("fact: (top " + moved_disk + " " + prev_peg + ")")
+        if self.kb.kb_ask(top_ask):
+            self.kb.kb_retract(top_ask)
+        else:
+            print("something went wrong with top...")
+
+        # STEP 3
+        prev_top_ask = parse_input("fact: (onTopOf " + moved_disk + " ?X)")
+        if self.kb.kb_ask(prev_top_ask):
+            # then it's not empty, make this one the top.
+            for binding in self.kb.kb_ask(prev_top_ask):
+                # there should only be one binding...
+                disk_on_bottom = binding.bindings[0].constant.element
+                # make the disk on bottom the new top of the previous peg
+                # then remove the "ontopof" fact because it's no longer true.
+                self.kb.kb_assert(parse_input("fact: (top " + disk_on_bottom + " " + prev_peg + ")"))
+                self.kb.kb_remove(parse_input("fact: (onTopOf " + moved_disk + " " + disk_on_bottom + ")"))
+        else:
+            self.kb.kb_assert(parse_input("fact: (empty " + prev_peg + ")"))
+
+
+
+        # DISK WE'RE MOVING TO: DEALING WITH TOP, EMPTY, and ONTOPOF.
+        # Add new on statement
+        # if empty, then remove empty statement. if not, add new ontopof statement and remove old top statement.
+        # Add new top statement
+
+        # STEP 1
         self.kb.kb_assert(new_fact)
+
+        # STEP 2
+        empty_ask = parse_input("fact: (empty " + new_peg + ")")
+        top_ask = parse_input("fact: (top ?X " + new_peg + ")")
+        if self.kb.kb_ask(empty_ask):
+            self.kb.kb_retract(empty_ask)
+        else:
+            top_disk = self.kb.kb_ask(top_ask).list_of_bindings[0][0].bindings[0].constant.element
+            oldTopFact = parse_input("fact: (top " + top_disk + " " + new_peg + ")")
+            ontopof_fact = parse_input("fact: (onTopOf " + moved_disk + " " + top_disk + ")")
+
+            self.kb.kb_retract(oldTopFact)
+            self.kb.kb_add(ontopof_fact)
+
+        newTopFact = parse_input("fact: (top " + moved_disk + " " + new_peg + ")")
+        self.kb.kb_add(newTopFact)
+
+        # if self.kb.kb_ask(top_ask):
+        #     self.kb.kb_retract(parse_input(
+        #         "fact: (top " + self.kb.kb_ask(top_ask)[0].bindings[0].constant.element + " " + movable_statement.terms[
+        #             1].term.element + ")"))
+
+
+
+
+
+
+        # if self.kb.kb_ask(empty_ask):
+        #     for binding in self.kb.kb_ask(empty_ask):
+        #         empty_peg = binding.bindings[0].constant.element
+        #         remove_empty = parse_input("fact: (empty " + empty_peg + ")")
+        #         if self.kb.kb_ask(parse_input("fact: (on ?X " + empty_peg + ")")):
+        #             print("removing: ", remove_empty)
+        #             self.kb.kb_retract(remove_empty)
+        #             # print("retracting: (empty " + empty_peg + ")")
+
+
+
+        # DISK WE'RE MOVING FROM: DEALING WITH TOP AND EMPTY.
+        # First, we retract the previous top statement.
+        # then, we must check: if the disk is now empty, we must say it's empty.
+        # if it's not, we must now add the new top statement.
+
+
+
+
+        # empty check
+
+        #
+        # for top_statement in self.kb.kb_ask(parse_input("fact: (top ?X ?A)")):
+        #     print(top_statement)
+
 
     def reverseMove(self, movable_statement):
         """
@@ -165,6 +296,7 @@ class Puzzle8Game(GameMaster):
             A Tuple of Tuples that represent the game state
         """
         ### Student code goes here
+
         ask_tile_11 = parse_input("fact: (located ?X pos1 pos1)")
         ask_tile_12 = parse_input("fact: (located ?X pos2 pos1)")
         ask_tile_13 = parse_input("fact: (located ?X pos3 pos1)")
@@ -246,6 +378,9 @@ class Puzzle8Game(GameMaster):
             None
         """
         ### Student code goes here
+
+        if type(movable_statement) != Statement or not self.kb.kb_ask(Fact(movable_statement, [])):
+            return None
 
         statement1_list = ["located"]
         statement2_list = ["located"]
